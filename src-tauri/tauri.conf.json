@@ -13,7 +13,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/TON_USER/TON_REPO/releases/latest/download/update.json"
+        "https://github.com/Frayzixxx/AthenaFN-Launcher/releases/latest/download/update.json"
       ],
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI5OEFBNDA3NkY3QkVGQUQKUldTdDczdHZCNlNLS2ZDaWVMRHZ0SWZ6Szl6emVqMHN4VUdyemExVHZQNkNUYUZ6bGd5cGFkUkIK"
