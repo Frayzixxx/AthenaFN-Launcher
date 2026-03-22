@@ -1,0 +1,78 @@
+# Build Windows + signature + update.json sur une Release GitHub.
+#
+# 1) Repo GitHub → Settings → Secrets → Actions → ajoute :
+#    TAURI_PRIVATE_KEY = contenu ENTIER du fichier src-tauri/updater.key (une seule ligne ou multiligne)
+#
+# 2) Avant de taguer : mets la même version dans package.json, src-tauri/Cargo.toml, tauri.conf.json (package.version).
+#
+# 3) Pousse un tag :
+#    git tag v1.0.22
+#    git push origin v1.0.22
+#
+# 4) Dans tauri.conf.json → updater → endpoints, utilise (remplace USER/REPO) :
+#    "https://github.com/USER/REPO/releases/latest/download/update.json"
+#
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: yarn
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build frontend
+        run: yarn build
+
+      - name: Build Tauri (signed)
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+        run: yarn tauri build
+
+      - name: Generate update.json manifest
+        env:
+          UPDATE_GITHUB_REPO: ${{ github.repository }}
+          UPDATE_RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/generate-update-manifest.mjs
+
+      - name: Copy manifest as update.json for Release
+        shell: pwsh
+        run: Copy-Item -Force update.generated.json update.json
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: false
+          files: |
+            update.json
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.nsis.zip
+            src-tauri/target/release/bundle/nsis/*.sig
